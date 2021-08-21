@@ -25,6 +25,18 @@ protected:
 	UPROPERTY(Category = Character, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* CameraComp;
 
+	/** Relative Yaw angle between camera capsule component and input direction */
+	float RelativeYaw;
+	/** Last MoveForward input value */
+	float InputMoveForward;
+	/** Last MoveRight input value */
+	float InputMoveRight;
+
+private:
+	/** Calculate RelativeYaw angle between */
+	FORCEINLINE void CalcRelativeYaw();
+
+protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
@@ -48,5 +60,17 @@ public:
 	* @param Val Movment input to apply
 	*/
 	void MoveRight(float Val);
+	
+	/** Return relative Yaw angle between camera capsule component and input direction */
+	UFUNCTION(BlueprintCallable, Category = Character)
+	float GetRelativeYaw() const { return RelativeYaw; }
+
+	/** Get last move forward input value */
+	UFUNCTION(BlueprintCallable, Category = Character)
+	float GetInputMoveForward() const { return InputMoveForward; }
+
+	/** Get last move right input value */
+	UFUNCTION(BlueprintCallable, Category = Character)
+	float GetInputMoveRight() const { return InputMoveRight; }
 
 };

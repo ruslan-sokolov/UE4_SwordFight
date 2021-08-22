@@ -27,43 +27,26 @@ protected:
 
 	/** Relative Yaw angle between camera capsule component and input direction */
 	float RelativeYaw;
-	/** Relative Speed value, 0 if idle, 1 if speed 2 if sprint, interpolated */
-	float RelativeSpeed;
-	/** Last MoveForward input value */
-	float InputMoveForward;
-	/** Last MoveRight input value */
-	float InputMoveRight;
-	
-	/** Current Max Speed (sprint or run etc) */
-	float CurrentMaxSpeed;
+	/** -1 if backward, 1 if forward, 2 if fwd sprint, -2 if fwd sprint*/
+	float RelativeSpeedForward;
+	/** -1 if left, 1 if right, 2 if right sprint, 2 if left sprint */
+	float RelativeSpeedRight;
 
 	/** if player sprint action pressed */
 	bool bShouldSprint;
-
-	/** Max character run speed */
-	UPROPERTY(Category = "SFCharacter", EditDefaultsOnly)
-	float MaxRunSpeed;
-	/** Max character sprint speed */
-	UPROPERTY(Category = "SFCharacter", EditDefaultsOnly)
-	float MaxSprintSpeed;
 	
-	/** if relative speed is less then this value, character anim considered not movable */
+	/** Character skeletal mesh root bone name */
 	UPROPERTY(Category = "SFCharacterAnimation", EditDefaultsOnly)
-	float RelativeSpeedIdleTreshold;
-	/** If relative speed is grater then this value, character anim considered start sprinting*/
-	UPROPERTY(Category = "SFCharacterAnimation", EditDefaultsOnly)
-	float RelativeSpeedSprintStartTreshold;
-	/** If reltaive speed is grater than this value, character anim considered sprint and max speed */
-	UPROPERTY(Category = "SFCharacterAnimation", EditDefaultsOnly)
-	float RelativeSpeedSprintMaxTreshold;
+	FName RootBoneName;
 
 private:
 	/** Calculate RelativeYaw angle between */
 	FORCEINLINE void CalcRelativeYaw();
-	/** Calculate RelativeSpeed */
-	FORCEINLINE void CalcRelativeSpeed();
 	/** Handle run/sprint switch */
 	FORCEINLINE void SetSprinting(bool bShouldSprint);
+
+	/** Draw debug movement */
+	FORCEINLINE void DrawDebugMovement();
 
 protected:
 	// Called when the game starts or when spawned
@@ -100,39 +83,27 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Character)
 	FORCEINLINE float GetRelativeYaw() const { return RelativeYaw; }
 
-	/** Get last move forward input value */
+	/** -1 if left, 1 if right, 2 if right sprint, 2 if left sprint */
 	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE float GetInputMoveForward() const { return InputMoveForward; }
+	FORCEINLINE float GetRelativeRightSpeed() const { return RelativeSpeedRight; }
 
-	/** Get last move right input value */
+	/** -1 if backward, 1 if forward, 2 if fwd sprint, -2 if fwd sprint*/
 	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE float GetInputMoveRight() const { return InputMoveRight; }
+	FORCEINLINE float GetRelativeForwardSpeed() const { return RelativeSpeedForward; }
 
-	/** Get Relative Speed value, 0 if idle, 1 if speed 2 if sprint, interpolated with current velocity */
+	/** return 0 if idle 1 if run 2 if sprint */
 	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE float GetRelativeSpeed() const { return RelativeSpeed; }
-
-	/** Get Current max speed, return max for run or sprint etc */
-	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE float GetCurrentMaxSpeed() const { return CurrentMaxSpeed; }
+	FORCEINLINE float GetAbsMaxSpeed() const { return FMath::Max(FMath::Abs(RelativeSpeedForward), FMath::Abs(RelativeSpeedRight)); }
 
 	/** if player sprint action pressed */
 	UFUNCTION(BlueprintCallable, Category = Character)
 	FORCEINLINE bool IsShouldSprint() const { return bShouldSprint; }
 
-	/** If relative speed > RelativeSpeedIdleTreshold, character is moving */
+	/** If relative speed > 0.01f, character is moving */
 	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE bool IsMoving() const { return RelativeSpeed > RelativeSpeedIdleTreshold; }
+	FORCEINLINE bool IsMoving() const { return RelativeSpeedRight != 0.f || RelativeSpeedForward != 0.f; }
 
-	/** if relative speed > RelativeSpeedSprintStartTreshold */
+	/** if relative speed > 1.98 */
 	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE bool IsSprinting() const { return RelativeSpeed > RelativeSpeedSprintStartTreshold; }
-
-	/** if relative speed > RelativeSpeedSprintMaxTreshold */
-	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE bool IsSprintingSpeedMax() const { return RelativeSpeed > RelativeSpeedSprintMaxTreshold; }
-
-	/** Get Relative Speed value, 0 if idle, 1 if speed 2 if sprint */
-	UFUNCTION(BlueprintCallable, Category = Character)
-	FORCEINLINE float GetRelativeSpeedMax() const { return IsMoving() ? (IsSprinting() ? 2.0f : 1.0f) : 0.f; }
+	FORCEINLINE bool IsSprinting() const { return RelativeSpeedRight >= 2.f || RelativeSpeedForward >= 2.f; }
 };

@@ -28,14 +28,11 @@ ASFCharacter::ASFCharacter()
 	CameraComp->SetupAttachment(SpringArmComp);
 
 	// defaults
-	MaxRunSpeed = 480.f;
-	MaxSprintSpeed = 620.f;
-	CurrentMaxSpeed = MaxRunSpeed;
-	GetCharacterMovement()->MaxWalkSpeed = MaxRunSpeed;
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bAllowPhysicsRotationDuringAnimRootMotion = true;
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 
-	RelativeSpeedIdleTreshold = 0.02f;
-	RelativeSpeedSprintStartTreshold = 1.1f;
-	RelativeSpeedSprintMaxTreshold = 1.95f;
+	RootBoneName = FName("root");
 }
 
 // Called when the game starts or when spawned
@@ -51,38 +48,10 @@ void ASFCharacter::Tick(float DeltaTime)
 	if (Controller)
 	{
 		CalcRelativeYaw();
-		CalcRelativeSpeed();
-
-		FVector DrawDebugLocation = GetCapsuleComponent()->GetComponentLocation();
-		DrawDebugLocation.Z -= GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-
-		constexpr float MaxArrowLength = 75.f;
-
-		// debug circle
-		DrawDebugCircle(GetWorld(), DrawDebugLocation, 50.f, 36, FColor::Cyan, false, -1.f, 0, 2.f, FVector(0.f, 1.f, 0.f), FVector(1.f, 0.f, 0.f));
-		DrawDebugPoint(GetWorld(), DrawDebugLocation + FVector(MaxArrowLength, 0.f, 0.f), 5.f, FColor::Red, false, -1.f);
-		DrawDebugPoint(GetWorld(), DrawDebugLocation + FVector(0.f, MaxArrowLength, 0.f), 5.f, FColor::Green, false, -1.f);
-
-		// debug actor fwd vec
-		FVector ActorDirection = FQuatRotationMatrix(GetActorQuat()).GetScaledAxis(EAxis::X) * MaxArrowLength;
-		DrawDebugDirectionalArrow(GetWorld(), DrawDebugLocation, DrawDebugLocation + ActorDirection, 10.f, FColor::Blue, false, -1.f, 0, 2.f);
-
-		// debug camera vec
-		FVector CameraDirection = CameraComp->GetComponentTransform().GetUnitAxis(EAxis::X);
-		CameraDirection.Z = 0.f;
-		CameraDirection.Normalize();
-		CameraDirection *= MaxArrowLength;
-		DrawDebugDirectionalArrow(GetWorld(), DrawDebugLocation, DrawDebugLocation + CameraDirection, 10.f, FColor::Yellow, false, -1.f, 0, 2.f);
-	
-		// debug movement direction vec
-		FVector MovementDirection = GetCharacterMovement()->Velocity;
-		MovementDirection.Normalize();
-		MovementDirection *= RelativeSpeed * MaxArrowLength;
-		DrawDebugDirectionalArrow(GetWorld(), DrawDebugLocation, DrawDebugLocation + MovementDirection, 10.f, FColor::Cyan, false, -1.f, 0, 2.f);
 		
-		// debug reltaive yaw
-		FString DbgMsg = FString("Yaw: ") + FString::SanitizeFloat(RelativeYaw) + FString("\nSpeed: ") + FString::SanitizeFloat(RelativeSpeed);
-		DrawDebugString(GetWorld(), DrawDebugLocation, DbgMsg, nullptr, FColor::Magenta, 0.f, true);
+		#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		DrawDebugMovement();
+		#endif
 	}
 
 }
@@ -102,25 +71,33 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void ASFCharacter::MoveForward(float Val)
 {
-	InputMoveForward = Val;
-
-	if (Controller && Val != 0.f)
+	if (Val == 0.f)
 	{
-		const FRotator Rotation = FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f);
-		const FVector Direction = FRotationMatrix(Rotation).GetScaledAxis(EAxis::X);
-		AddMovementInput(Direction, Val);
+		RelativeSpeedForward = 0.f;
+	}
+	else if (Val > 0.f)
+	{
+		RelativeSpeedForward = bShouldSprint ? 2.f : 1.f;
+	}
+	else
+	{
+		RelativeSpeedForward = bShouldSprint ? -2.f : -1.f;
 	}
 }
 
 void ASFCharacter::MoveRight(float Val)
 {
-	InputMoveRight = Val;
-
-	if (Controller && Val != 0.f)
+	if (Val == 0.f)
 	{
-		const FRotator Rotation = FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f);
-		const FVector Direction = FRotationMatrix(Rotation).GetScaledAxis(EAxis::Y);
-		AddMovementInput(Direction, Val);
+		RelativeSpeedRight = 0.f;
+	}
+	else if (Val > 0.f)
+	{
+		RelativeSpeedRight = bShouldSprint ? 2.f : 1.f;
+	}
+	else
+	{
+		RelativeSpeedRight = bShouldSprint ? -2.f : -1.f;
 	}
 }
 
@@ -134,49 +111,68 @@ void ASFCharacter::OnStopSprint()
 	SetSprinting(false);
 }
 
+FORCEINLINE void ASFCharacter::SetSprinting(bool bInShouldSprint)
+{
+	bShouldSprint = bInShouldSprint;
+}
+
 FORCEINLINE void ASFCharacter::CalcRelativeYaw()
 {
-	float InputYaw = FMath::Atan2(-InputMoveRight, InputMoveForward) * (180.f / PI);
+	float InputYaw = FMath::Atan2(-RelativeSpeedRight, RelativeSpeedForward) * (180.f / PI);
 	float CapsuleCameraYaw_Delta = CameraComp->GetComponentRotation().Yaw - GetCapsuleComponent()->GetComponentRotation().Yaw;
 	CapsuleCameraYaw_Delta = FRotator::NormalizeAxis(CapsuleCameraYaw_Delta); // clamp angle
 	RelativeYaw = CapsuleCameraYaw_Delta - InputYaw;
 }
 
-FORCEINLINE void ASFCharacter::CalcRelativeSpeed()
+FORCEINLINE void ASFCharacter::DrawDebugMovement()
 {
-	const float Velocity2D = GetVelocity().Size2D();
+	FVector DrawDebugLocation = GetCapsuleComponent()->GetComponentLocation();
+	DrawDebugLocation.Z -= GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 
-	if (Velocity2D > MaxRunSpeed)
-	{
-		if (Velocity2D > MaxSprintSpeed)
-		{
-			RelativeSpeed = 2.f;
-			return;
-		}
-		RelativeSpeed = 1.0f + (Velocity2D - MaxRunSpeed) / (MaxSprintSpeed - MaxRunSpeed);
-	}
-	else
-	{
-		RelativeSpeed = Velocity2D / MaxRunSpeed;
-	}
-}
+	constexpr float MaxArrowLength = 75.f;
 
-FORCEINLINE void ASFCharacter::SetSprinting(bool bInShouldSprint)
-{
-	if (bShouldSprint != bInShouldSprint && GetCharacterMovement())
-	{
-		if (bInShouldSprint)
-		{
-			CurrentMaxSpeed = MaxSprintSpeed;
-			bShouldSprint = true;
-		}
-		else
-		{
-			CurrentMaxSpeed = MaxRunSpeed;
-			bShouldSprint = false;
-		}
+	// debug circle
+	DrawDebugCircle(GetWorld(), DrawDebugLocation, 50.f, 36, FColor::Cyan, false, -1.f, 0, 0.f, FVector(0.f, 1.f, 0.f), FVector(1.f, 0.f, 0.f));
+	DrawDebugPoint(GetWorld(), DrawDebugLocation + FVector(MaxArrowLength, 0.f, 0.f), 5.f, FColor::Red, false, -1.f);
+	DrawDebugPoint(GetWorld(), DrawDebugLocation + FVector(0.f, MaxArrowLength, 0.f), 5.f, FColor::Green, false, -1.f);
 
-		GetCharacterMovement()->MaxWalkSpeed = CurrentMaxSpeed;
-	}
+	// debug actor fwd vec
+	auto ActorQuatRotation = GetActorQuat();
+	FVector ActorDirection = FQuatRotationMatrix(ActorQuatRotation).GetScaledAxis(EAxis::X) * MaxArrowLength;
+	DrawDebugDirectionalArrow(GetWorld(), DrawDebugLocation, DrawDebugLocation + ActorDirection, 10.f, FColor::Blue, false, -1.f, 0, 0.f);
 
+	// debug camera vec
+	FVector CameraDirection = CameraComp->GetComponentTransform().GetUnitAxis(EAxis::X);
+	CameraDirection.Z = 0.f;
+	CameraDirection.Normalize();
+	CameraDirection *= MaxArrowLength;
+	DrawDebugDirectionalArrow(GetWorld(), DrawDebugLocation, DrawDebugLocation + CameraDirection, 10.f, FColor::Yellow, false, -1.f, 0, 0.f);
+
+	// debug movement direction vec
+	FVector InputVector{ RelativeSpeedForward, RelativeSpeedRight, 0.f };
+	InputVector.Normalize();
+	
+	FVector MovementDirection = ActorQuatRotation.RotateVector(InputVector);
+	MovementDirection *= GetAbsMaxSpeed() * MaxArrowLength;
+	DrawDebugDirectionalArrow(GetWorld(), DrawDebugLocation, DrawDebugLocation + MovementDirection, 10.f, FColor::Cyan, false, -1.f, 0, 0.f);
+
+	// debug reltaive yaw
+	FString DbgMsg = FString("Yaw: ") + FString::SanitizeFloat(RelativeYaw) + FString("\nSpeedX: ") + FString::SanitizeFloat(RelativeSpeedForward)
+		+ FString("\nSpeedY:") + FString::SanitizeFloat(RelativeSpeedRight);
+	DrawDebugString(GetWorld(), DrawDebugLocation, DbgMsg, nullptr, FColor::Magenta, 0.f, true);
+
+	// debug root
+	constexpr float ConeSize = 4.f;
+	constexpr float ConeHeight = ConeSize * UE_HALF_SQRT_2;
+
+	const FVector RootDirection = GetMesh()->GetBoneQuaternion(RootBoneName).GetRightVector();
+	FVector RootLocation = GetMesh()->GetBoneLocation(RootBoneName);
+	RootLocation.Z += ConeHeight;
+
+	const FVector ConeOffset = RootDirection * ConeHeight;
+	const FVector FrontConeRootLoc = RootLocation + ConeOffset;
+	const FVector BackConeRootLoc = RootLocation - ConeOffset;
+
+	DrawDebugCone(GetWorld(), FrontConeRootLoc, RootDirection, -ConeSize, PI/4.f, PI/4.f, 4, FColor::Red, false, -1.f, 0, 0.f);
+	DrawDebugCone(GetWorld(), BackConeRootLoc, RootDirection, ConeSize, PI/4.f, PI/4.f, 4, FColor::Purple, false, -1.f, 0, 0.f);
 }

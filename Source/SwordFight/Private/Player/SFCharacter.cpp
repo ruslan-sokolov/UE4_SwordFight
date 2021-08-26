@@ -124,7 +124,7 @@ FORCEINLINE void ASFCharacter::CalcRelativeYaw()
 	RelativeYaw = CapsuleCameraYaw_Delta - InputYaw;
 }
 
-FORCEINLINE void ASFCharacter::DrawDebugMovement()
+FORCEINLINE void ASFCharacter::DrawDebugMovement() const
 {
 	FVector DrawDebugLocation = GetCapsuleComponent()->GetComponentLocation();
 	DrawDebugLocation.Z -= GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
@@ -158,11 +158,11 @@ FORCEINLINE void ASFCharacter::DrawDebugMovement()
 
 	// debug reltaive yaw
 	FString DbgMsg = FString("Yaw: ") + FString::SanitizeFloat(RelativeYaw) + FString("\nSpeedX: ") + FString::SanitizeFloat(RelativeSpeedForward)
-		+ FString("\nSpeedY:") + FString::SanitizeFloat(RelativeSpeedRight);
+		+ FString("\nSpeedY:") + FString::SanitizeFloat(RelativeSpeedRight) + FString("\nAvgVelocity: ") + FString::SanitizeFloat(GetCharacterMovement()->Velocity.Size());
 	DrawDebugString(GetWorld(), DrawDebugLocation, DbgMsg, nullptr, FColor::Magenta, 0.f, true);
 
 	// debug root
-	constexpr float ConeSize = 4.f;
+	constexpr float ConeSize = 6.f;
 	constexpr float ConeHeight = ConeSize * UE_HALF_SQRT_2;
 
 	const FVector RootDirection = GetMesh()->GetBoneQuaternion(RootBoneName).GetRightVector();
@@ -174,5 +174,5 @@ FORCEINLINE void ASFCharacter::DrawDebugMovement()
 	const FVector BackConeRootLoc = RootLocation - ConeOffset;
 
 	DrawDebugCone(GetWorld(), FrontConeRootLoc, RootDirection, -ConeSize, PI/4.f, PI/4.f, 4, FColor::Red, false, -1.f, 0, 0.f);
-	DrawDebugCone(GetWorld(), BackConeRootLoc, RootDirection, ConeSize, PI/4.f, PI/4.f, 4, FColor::Purple, false, -1.f, 0, 0.f);
+	DrawDebugCone(GetWorld(), BackConeRootLoc, RootDirection, ConeSize, PI/4.f, PI/4.f, 4, FColor::Orange, false, -1.f, 0, 0.f);
 }

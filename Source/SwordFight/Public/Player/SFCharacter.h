@@ -46,7 +46,7 @@ private:
 	FORCEINLINE void SetSprinting(bool bShouldSprint);
 
 	/** Draw debug movement */
-	FORCEINLINE void DrawDebugMovement();
+	FORCEINLINE void DrawDebugMovement() const;
 
 protected:
 	// Called when the game starts or when spawned

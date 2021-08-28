@@ -171,8 +171,7 @@ FORCEINLINE void ASFCharacter::DrawDebugMovement() const
 	DrawDebugDirectionalArrow(GetWorld(), DrawDebugLocation, DrawDebugLocation + MovementDirection, 10.f, FColor::Cyan, false, -1.f, 0, 0.f);
 
 	// debug reltaive yaw
-	FString DbgMsg = FString("Yaw: ") + FString::SanitizeFloat(RelativeYaw) + FString("\nSpeedX: ") + FString::SanitizeFloat(RelativeSpeedForward)
-		+ FString("\nSpeedY:") + FString::SanitizeFloat(RelativeSpeedRight) + FString("\nAvgVelocity: ") + FString::SanitizeFloat(GetCharacterMovement()->Velocity.Size());
+	FString DbgMsg = FString("Yaw: ") + FString::SanitizeFloat(RelativeYaw) + FString("\nAvg_V: ") + FString::SanitizeFloat(GetCharacterMovement()->Velocity.Size());
 	DrawDebugString(GetWorld(), DrawDebugLocation, DbgMsg, nullptr, FColor::Magenta, 0.f, true);
 
 	// debug root

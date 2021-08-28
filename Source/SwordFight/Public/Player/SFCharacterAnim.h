@@ -30,13 +30,19 @@ private:
 	FORCEINLINE bool HandleLineTraceFoot(const FVector& InMeshBottomFoot_RootZ, FHitResult& OutFootTraceResult, float& OutFootOffset);
 
 	// calculates IKAlphaLegLeft, IKAlphaLegRight, IKLegHipDisplacement
-	FORCEINLINE void CalcLegIKAlphaValues();
+	FORCEINLINE void CalcLegIKAlphaValues(const float DeltaSeconds);
 
 	// default IK Foot trace query params
 	FCollisionQueryParams IKFootTraceQueryParams;
 
 	// cache bottom foot mesh location 
 	FVector MeshBottomFootR_RootZ, MeshBottomFootL_RootZ;
+
+	// DEPRECATED animation notifiers ik leg controllers
+	bool bAllowIKLeg_R, bAllowIKLeg_L;
+
+	// value to smooth hip z dislocation on leg ik
+	float IKLegHipDisplacementZ_To;
 
 public:
 	USFCharacterAnim();
@@ -52,18 +58,36 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	FName RootBoneName;
+
+	//DEPRECATED
+	UPROPERTY(EditDefaultsOnly)
+	FName NotifierName_AllowIKLegR;
+	
+	UPROPERTY(EditDefaultsOnly)
+	FName NotifierName_BlockIKLegR;
+	
+	UPROPERTY(EditDefaultsOnly)
+	FName NotifierName_AllowIKLegL;
+	
+	UPROPERTY(EditDefaultsOnly)
+	FName NotifierName_BlockIKLegL;
+	//
 	
 	// z distance between foot bone and foot mesh bottom part (applied to default scale size, actual value is change depended on scale)
 	UPROPERTY(EditDefaultsOnly)
 	float FootBoneZOffset;
 
-	// max z distance up and down from root to trace foot ik
+	// max z distance up and down from root to trace foot
 	UPROPERTY(EditDefaultsOnly)
 	float MaxFootIKTraceDist;
 
-	// max z value to allow negative hip z adjusting
+	// clamp max "-z hip adjustmenet compensating negative leg IK" value
 	UPROPERTY(EditDefaultsOnly)
 	float MaxHipDisplacement;
+
+	// speed of changing IKLegHipDisplacementZ smothly
+	UPROPERTY(EditDefaultsOnly)
+	float HipDisplacementSpeed;
 
 	// maximum IK Leg Z distance, used to calculate IK Leg alpha value
 	UPROPERTY(EditDefaultsOnly)
@@ -101,5 +125,7 @@ public:
 
 	virtual void NativeInitializeAnimation() override;
 	
-
+protected:
+	//DEPRECATED
+	virtual bool HandleNotify(const FAnimNotifyEvent& AnimNotifyEvent) override;
 };

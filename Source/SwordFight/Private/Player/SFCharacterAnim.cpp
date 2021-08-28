@@ -15,11 +15,11 @@ USFCharacterAnim::USFCharacterAnim()
 	RootBoneName= FName("Root");
 
 	FootBoneZOffset = 13.5f;
-	MaxFootIKTraceDist = 100.f;
+	MaxFootIKTraceDist = 50.f;
+	MaxHipDisplacement = 36.f;
+	MaxIKLegZ = 40.f;
 
 	FootIKTraceChannel = ECollisionChannel::ECC_Camera;
-
-	IKFootTraceQueryParams.bTraceComplex = true;
 }
 
 void USFCharacterAnim::NativeInitializeAnimation()
@@ -54,52 +54,66 @@ FORCEINLINE void USFCharacterAnim::CalcMeshBottomFootPositions()
 
 	MeshBottomFootR = BoneFootLocation_R + FootBottomOffset_R;  // wtf???
 	MeshBottomFootL = BoneFootLocation_L - FootBottomOffset_L;
+
+	const FVector RootBoneLocation = SFCharacter->GetMesh()->GetSocketLocation(RootBoneName);
+
+	MeshBottomFootR_RootZ = FVector(MeshBottomFootR.X, MeshBottomFootR.Y, RootBoneLocation.Z);
+	MeshBottomFootL_RootZ = FVector(MeshBottomFootL.X, MeshBottomFootL.Y, RootBoneLocation.Z);
 }
 
-FORCEINLINE void USFCharacterAnim::LineTraceFoot(const FVector& InInitialFootPosition, FHitResult& InFootTraceResult)
+FORCEINLINE bool USFCharacterAnim::HandleLineTraceFoot(const FVector& InMeshBottomFoot_RootZ, FHitResult& OutFootTraceResult, float& OutFootOffset)
 {
-	const FVector IKFoot_Start = FVector(InInitialFootPosition.X, InInitialFootPosition.Y, InInitialFootPosition.Z + MaxFootIKTraceDist);
-	const FVector IKFoot_End = FVector(InInitialFootPosition.X, InInitialFootPosition.Y, InInitialFootPosition.Z - MaxFootIKTraceDist);
+	const FVector IKFoot_Start = FVector(InMeshBottomFoot_RootZ.X, InMeshBottomFoot_RootZ.Y, InMeshBottomFoot_RootZ.Z + MaxFootIKTraceDist);
+	const FVector IKFoot_End = FVector(InMeshBottomFoot_RootZ.X, InMeshBottomFoot_RootZ.Y, InMeshBottomFoot_RootZ.Z - MaxFootIKTraceDist);
 
-	GetWorld()->LineTraceSingleByChannel(InFootTraceResult, IKFoot_Start, IKFoot_End, FootIKTraceChannel, IKFootTraceQueryParams);
+	if (GetWorld()->LineTraceSingleByChannel(OutFootTraceResult, IKFoot_Start, IKFoot_End, FootIKTraceChannel, IKFootTraceQueryParams))
+	{
+		OutFootOffset = OutFootTraceResult.ImpactPoint.Z - InMeshBottomFoot_RootZ.Z;
+
+		//DrawDebugSphere(GetWorld(), OutFootTraceResult.ImpactPoint, 4, 36, FColor::Green, false, -1.f, 0);
+		//DrawDebugLine(GetWorld(), IKFoot_Start, IKFoot_End, FColor::Blue, false, -1.f, 0);
+
+		return true;
+	}
+	else
+	{
+		//DrawDebugLine(GetWorld(), IKFoot_Start, IKFoot_End, FColor::Red, false, -1.f, 0);
+		OutFootOffset = 0;
+		return false;
+	}
 }
 
 FORCEINLINE void USFCharacterAnim::CalcLegIKAlphaValues()
 {
-	// todo fix
-
-	const float MagicAlphaValue = 20.f; // todo: remove magic
-
-	const FVector RootBoneLocation = SFCharacter->GetMesh()->GetSocketLocation(RootBoneName);
-
 	// line trace Right foot ik position
 	FHitResult IKFootTraceResult_R;
-	const FVector IKFootInitialPosition_R = FVector(MeshBottomFootR.X, MeshBottomFootR.Y, MeshBottomFootR.Z + RootBoneLocation.Z);
-	 
-	if (IKFootTraceResult_R.bBlockingHit)
-	{
-		IKAlphaLegRight = (IKFootTraceResult_R.Location - MeshBottomFootR).Z / MagicAlphaValue;
-	}
-	else
-	{
-		IKAlphaLegRight = 0.f;
-	}
+	float IKFootOffset_R = 0.f;
+	bool IKFootTraceHit_R = HandleLineTraceFoot(MeshBottomFootR_RootZ, IKFootTraceResult_R, IKFootOffset_R);
 
 	// line trace Left foot ik position
 	FHitResult IKFootTraceResult_L;
-	const FVector IKFootInitialPosition_L = FVector(MeshBottomFootL.X, MeshBottomFootL.Y, MeshBottomFootL.Z + RootBoneLocation.Z);
+	float IKFootOffset_L = 0.f;
+	bool IKFootTraceHit_L = HandleLineTraceFoot(MeshBottomFootL_RootZ, IKFootTraceResult_L, IKFootOffset_L);
 
-	if (IKFootTraceResult_L.bBlockingHit)
-	{
-		IKAlphaLegLeft = (IKFootTraceResult_L.Location - MeshBottomFootL).Z / MagicAlphaValue;
-	}
-	else
-	{
-		IKAlphaLegLeft = 0.f;
-	}
+	//DrawDebugString(GetWorld(), MeshBottomFootL_RootZ, FString("FootOffsetL: ") + FString::SanitizeFloat(IKFootOffset_L), 0, FColor::White, 0.f, true);
+	//DrawDebugString(GetWorld(), MeshBottomFootR_RootZ, FString("FootOffsetR: ") + FString::SanitizeFloat(IKFootOffset_R), 0, FColor::White, 0.f, true);
 
-	// hip displacement
-	IKLegHipDisplacementZ = (IKFootTraceResult_R.Location - IKFootTraceResult_L.Location).Z * -0.5f;
+	if (IKFootOffset_R < 0.f && IKFootOffset_R < IKFootOffset_L)
+	{
+		IKLegHipDisplacementZ = IKFootOffset_R;  // negative z offset
+		IKFootOffset_L -= IKFootOffset_R;  // positive z offset for opposite foot
+		IKFootOffset_R = 0.f;  // hip displacement set, nullify this value to compensate height
+	}
+	else if (IKFootOffset_L < 0.f)
+	{
+		IKLegHipDisplacementZ = IKFootOffset_L;  // negative z offset
+		IKFootOffset_R -= IKFootOffset_L;  // positive z offset for opposite foot
+		IKFootOffset_L = 0.f;  // hip displacement set, nullify this value to compensate height
+	}
+	
+	// calc ik foot alphas
+	IKAlphaLegRight = IKFootOffset_R / MaxIKLegZ;
+	IKAlphaLegLeft = IKFootOffset_L / MaxIKLegZ;
 }
 
 FORCEINLINE void USFCharacterAnim::DrawDebugFootIK() const
@@ -110,10 +124,19 @@ FORCEINLINE void USFCharacterAnim::DrawDebugFootIK() const
 	FPlane PlaneL = FPlane(MeshBottomFootL, IkFootL_Normal);
 	FPlane PlaneR = FPlane(MeshBottomFootR, IkFootR_Normal);
 
+	// foot plane
 	DrawDebugSolidPlane(GetWorld(), PlaneL, MeshBottomFootL, 15, FColor::Cyan);
 	DrawDebugSolidPlane(GetWorld(), PlaneR, MeshBottomFootR, 15, FColor::Cyan);
 
-	DrawDebugString(GetWorld(), MeshBottomFootL, FString("IKLegAlpha: ") + FString::SanitizeFloat(IKAlphaLegLeft), 0, FColor::White, 0.f, true);
-	DrawDebugString(GetWorld(), MeshBottomFootR, FString("IKLegAlpha: ") + FString::SanitizeFloat(IKAlphaLegRight), 0, FColor::White, 0.f, true);
-	DrawDebugString(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(HipBoneName), FString("HipDisplacement: ") + FString::SanitizeFloat(IKLegHipDisplacementZ), 0, FColor::White, 0.f, true);
+	// foot ik main locations
+	// DrawDebugSphere(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(RootBoneName), 6, 4, FColor::Red);
+	DrawDebugSphere(GetWorld(), MeshBottomFootR, 6, 4, FColor::Orange);
+	DrawDebugSphere(GetWorld(), MeshBottomFootL, 6, 4, FColor::Orange);
+	DrawDebugSphere(GetWorld(), MeshBottomFootR_RootZ, 3, 4, FColor::Yellow, false, -1.f, 0);
+	DrawDebugSphere(GetWorld(), MeshBottomFootL_RootZ, 3, 4, FColor::Yellow, false, -1.f, 0);
+
+	// IK Alpha values
+	//DrawDebugString(GetWorld(), MeshBottomFootL, FString("AlphaL: ") + FString::SanitizeFloat(IKAlphaLegLeft), 0, FColor::White, 0.f, true);
+	//DrawDebugString(GetWorld(), MeshBottomFootR, FString("AlphaR: ") + FString::SanitizeFloat(IKAlphaLegRight), 0, FColor::White, 0.f, true);
+	DrawDebugString(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(HipBoneName), FString("HipZDisplacement: ") + FString::SanitizeFloat(IKLegHipDisplacementZ), 0, FColor::White, 0.f, true);
 }

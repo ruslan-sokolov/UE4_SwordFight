@@ -22,16 +22,21 @@ private:
 	
 	/** Handle line trace for foot
 	
-	* @param InInitialFootPosition : where foot is should be located if IK disabled. should be vector: bone location xy and root z
-	* @param InFootTraceResult : foot ik trace result out
+	* @param InMeshBottomFoot_RootZ : location of mesh bottom foot on root z level (left or right)
+	* @param OutFootTraceResult : foot ik trace result out
+	* @param OutFootOffset : distance between foot root location and foot location where it should be
+	* @return Success LineTrace
 	*/
-	FORCEINLINE void LineTraceFoot(const FVector& InInitialFootPosition, FHitResult& InFootTraceResult);
+	FORCEINLINE bool HandleLineTraceFoot(const FVector& InMeshBottomFoot_RootZ, FHitResult& OutFootTraceResult, float& OutFootOffset);
 
 	// calculates IKAlphaLegLeft, IKAlphaLegRight, IKLegHipDisplacement
 	FORCEINLINE void CalcLegIKAlphaValues();
 
 	// default IK Foot trace query params
 	FCollisionQueryParams IKFootTraceQueryParams;
+
+	// cache bottom foot mesh location 
+	FVector MeshBottomFootR_RootZ, MeshBottomFootL_RootZ;
 
 public:
 	USFCharacterAnim();
@@ -55,6 +60,14 @@ public:
 	// max z distance up and down from root to trace foot ik
 	UPROPERTY(EditDefaultsOnly)
 	float MaxFootIKTraceDist;
+
+	// max z value to allow negative hip z adjusting
+	UPROPERTY(EditDefaultsOnly)
+	float MaxHipDisplacement;
+
+	// maximum IK Leg Z distance, used to calculate IK Leg alpha value
+	UPROPERTY(EditDefaultsOnly)
+	float MaxIKLegZ;
 
 	//UPROPERTY(EditDefaultsOnly)
 	ECollisionChannel FootIKTraceChannel;

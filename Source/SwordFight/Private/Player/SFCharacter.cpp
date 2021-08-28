@@ -50,7 +50,7 @@ void ASFCharacter::Tick(float DeltaTime)
 		CalcRelativeYaw();
 		
 		#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		DrawDebugMovement();
+			DrawDebugMovement();
 		#endif
 	}
 
@@ -66,6 +66,8 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ASFCharacter::OnStartSprint);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ASFCharacter::OnStopSprint);
+	PlayerInputComponent->BindAction("DisableMoveToCamera", IE_Pressed, this, &ASFCharacter::OnStartDisableMoveToCamera);
+	PlayerInputComponent->BindAction("DisableMoveToCamera", IE_Released, this, &ASFCharacter::OnEndDisableMoveToCamera);
 
 }
 
@@ -109,6 +111,18 @@ void ASFCharacter::OnStartSprint()
 void ASFCharacter::OnStopSprint()
 {
 	SetSprinting(false);
+}
+
+void ASFCharacter::OnStartDisableMoveToCamera()
+{
+	if (GetCharacterMovement())
+		GetCharacterMovement()->bUseControllerDesiredRotation = false;
+}
+
+void ASFCharacter::OnEndDisableMoveToCamera()
+{
+	if (GetCharacterMovement())
+		GetCharacterMovement()->bUseControllerDesiredRotation = true;
 }
 
 FORCEINLINE void ASFCharacter::SetSprinting(bool bInShouldSprint)

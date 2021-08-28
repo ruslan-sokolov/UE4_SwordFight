@@ -78,6 +78,12 @@ public:
 	
 	/** player released sprint action */
 	void OnStopSprint();
+
+	/** player pressed DisableMoveToCamera action */
+	void OnStartDisableMoveToCamera();
+
+	/** player released DisableMoveToCamera action */
+	void OnEndDisableMoveToCamera();
 	
 	/** Return relative Yaw angle between camera capsule component and input direction */
 	UFUNCTION(BlueprintCallable, Category = Character)

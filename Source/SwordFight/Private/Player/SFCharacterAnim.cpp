@@ -125,8 +125,8 @@ FORCEINLINE void USFCharacterAnim::DrawDebugFootIK() const
 	FPlane PlaneR = FPlane(MeshBottomFootR, IkFootR_Normal);
 
 	// foot plane
-	DrawDebugSolidPlane(GetWorld(), PlaneL, MeshBottomFootL, 15, FColor::Cyan);
-	DrawDebugSolidPlane(GetWorld(), PlaneR, MeshBottomFootR, 15, FColor::Cyan);
+	//DrawDebugSolidPlane(GetWorld(), PlaneL, MeshBottomFootL, 15, FColor::Cyan);
+	//DrawDebugSolidPlane(GetWorld(), PlaneR, MeshBottomFootR, 15, FColor::Cyan);
 
 	// foot ik main locations
 	// DrawDebugSphere(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(RootBoneName), 6, 4, FColor::Red);

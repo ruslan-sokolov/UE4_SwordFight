@@ -29,6 +29,9 @@ private:
 	*/
 	FORCEINLINE bool HandleLineTraceFoot(const FVector& InMeshBottomFoot_RootZ, FHitResult& OutFootTraceResult, float& OutFootOffset);
 
+	// calculates rotation for foot bone to be parallel to surface
+	FORCEINLINE void CalcFootRotation(const FHitResult& FootTrace_R, const FHitResult& FootTrace_L);
+
 	// calculates IKAlphaLegLeft, IKAlphaLegRight, IKLegHipDisplacement
 	FORCEINLINE void CalcLegIKAlphaValues(const float DeltaSeconds);
 
@@ -37,6 +40,9 @@ private:
 
 	// cache bottom foot mesh location 
 	FVector MeshBottomFootR_RootZ, MeshBottomFootL_RootZ;
+
+	// cache character scale
+	FVector CharacterScale;
 
 	// DEPRECATED animation notifiers ik leg controllers
 	bool bAllowIKLeg_R, bAllowIKLeg_L;
@@ -73,23 +79,23 @@ public:
 	FName NotifierName_BlockIKLegL;
 	//
 	
-	// z distance between foot bone and foot mesh bottom part (applied to default scale size, actual value is change depended on scale)
+	// z distance between foot bone and foot mesh bottom part (actual value will be mult by char mesh scale)
 	UPROPERTY(EditDefaultsOnly)
 	float FootBoneZOffset;
 
-	// max z distance up and down from root to trace foot
+	// max z distance up and down from root to trace foot (actual value will be mult by char mesh scale)
 	UPROPERTY(EditDefaultsOnly)
 	float MaxFootIKTraceDist;
 
-	// clamp max "-z hip adjustmenet compensating negative leg IK" value
+	// clamp max "-z hip adjustmenet compensating negative leg IK" value (actual value will be mult by char mesh scale)
 	UPROPERTY(EditDefaultsOnly)
 	float MaxHipDisplacement;
 
-	// speed of changing IKLegHipDisplacementZ smothly
+	// speed of changing IKLegHipDisplacementZ smothly (actual value will be mult by char mesh scale)
 	UPROPERTY(EditDefaultsOnly)
 	float HipDisplacementSpeed;
 
-	// maximum IK Leg Z distance, used to calculate IK Leg alpha value
+	// maximum IK Leg Z distance, used to calculate IK Leg alpha value (actual value will be mult by char mesh scale)
 	UPROPERTY(EditDefaultsOnly)
 	float MaxIKLegZ;
 
@@ -120,6 +126,13 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FVector MeshBottomFootL;
 
+	// left foot bone rotation to make foot plane always be parallel to surface
+	UPROPERTY(BlueprintReadOnly)
+	FRotator FootLeftWorldRotation;
+
+	// right foot bone rotation to make foot plane always be parallel to surface
+	UPROPERTY(BlueprintReadOnly)
+	FRotator FootRightWorldRotation;
 
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 

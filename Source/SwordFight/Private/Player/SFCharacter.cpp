@@ -50,7 +50,7 @@ void ASFCharacter::Tick(float DeltaTime)
 		CalcRelativeYaw();
 		
 		#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			DrawDebugMovement();
+			// DrawDebugMovement();
 		#endif
 	}
 

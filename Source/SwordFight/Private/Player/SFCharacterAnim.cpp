@@ -14,11 +14,10 @@ USFCharacterAnim::USFCharacterAnim()
 	HipBoneName = FName("Pelvis");
 	RootBoneName= FName("Root");
 	
-	//DEPRECATED
-	NotifierName_AllowIKLegR = FName("AnimNotify_DEPRECATED_Allow_IK_FootR");
-	NotifierName_BlockIKLegR = FName("AnimNotify_DEPRECATED_Block_IK_FootR");
-	NotifierName_AllowIKLegL = FName("AnimNotify_DEPRECATED_Allow_IK_FootL");
-	NotifierName_BlockIKLegL = FName("AnimNotify_DEPRECATED_Block_IK_FootL");
+	NotifierName_AllowIKLegR = FName("AnimNotify_Allow_IK_FootR");
+	NotifierName_BlockIKLegR = FName("AnimNotify_Block_IK_FootR");
+	NotifierName_AllowIKLegL = FName("AnimNotify_Allow_IK_FootL");
+	NotifierName_BlockIKLegL = FName("AnimNotify_Block_IK_FootL");
 
 	FootBoneZOffset = 13.5f;
 	MaxFootIKTraceDist = 50.f;
@@ -36,7 +35,6 @@ void USFCharacterAnim::NativeInitializeAnimation()
 	IKFootTraceQueryParams.AddIgnoredActor(SFCharacter);
 }
 
-//DEPRECATED
 bool USFCharacterAnim::HandleNotify(const FAnimNotifyEvent& AnimNotifyEvent)
 {
 	// handle ik leg allow/block notifiers
@@ -69,7 +67,7 @@ void USFCharacterAnim::NativeUpdateAnimation(float DeltaSeconds)
 	}
 
 	CalcMeshBottomFootPositions();
-	CalcLegIKAlphaValues(DeltaSeconds);
+	CalcIKValues(DeltaSeconds);
 
 	#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		DrawDebugFootIK();
@@ -104,18 +102,11 @@ FORCEINLINE bool USFCharacterAnim::HandleLineTraceFoot(const FVector& InMeshBott
 	if (GetWorld()->LineTraceSingleByChannel(OutFootTraceResult, IKFoot_Start, IKFoot_End, FootIKTraceChannel, IKFootTraceQueryParams))
 	{
 		OutFootOffset = OutFootTraceResult.ImpactPoint.Z - InMeshBottomFoot_RootZ.Z;
-
-		// debug
-		//DrawDebugSphere(GetWorld(), OutFootTraceResult.ImpactPoint, 4, 36, FColor::Green, false, -1.f, 0);
-		//DrawDebugLine(GetWorld(), IKFoot_Start, IKFoot_End, FColor::Blue, false, -1.f, 0);
-		// DrawDebugDirectionalArrow(GetWorld(), OutFootTraceResult.ImpactPoint, OutFootTraceResult.ImpactPoint + OutFootTraceResult.ImpactNormal * 75.f, 6, FColor::Blue, false, -1.f, 0);
-
+		
 		return true;
 	}
 	else
 	{
-		// debug
-		// DrawDebugLine(GetWorld(), IKFoot_Start, IKFoot_End, FColor::Red, false, -1.f, 0);
 		OutFootOffset = 0;
 		return false;
 	}
@@ -123,24 +114,30 @@ FORCEINLINE bool USFCharacterAnim::HandleLineTraceFoot(const FVector& InMeshBott
 
 FORCEINLINE void USFCharacterAnim::CalcFootRotation(const FHitResult& FootTrace_R, const FHitResult& FootTrace_L)
 {
-	//FVector NormalFootTrace_R = FootTrace_R.ImpactNormal;
-	//DrawDebugString(GetWorld(), MeshBottomFootR, NormalFootTrace_R.ToString(), 0, FColor::White, 0.f, true);
-	//
-	//FVector NormalFootTrace_L = FootTrace_L.ImpactNormal;
-	//DrawDebugString(GetWorld(), MeshBottomFootL, NormalFootTrace_L.ToString(), 0, FColor::White, 0.f, true);
+	if (bAllowIKLeg_R)
+	{
+		const float Pitch_R = -FMath::RadiansToDegrees(FMath::Atan2(FootTrace_R.ImpactNormal.X, FootTrace_R.ImpactNormal.Z));
+		const float Roll_R = FMath::RadiansToDegrees(FMath::Atan2(FootTrace_R.ImpactNormal.Y, FootTrace_R.ImpactNormal.Z));
+		FootRightWorldRotation = FRotator(Pitch_R, 0.f, Roll_R);
+	}
+	else
+	{
+		FootRightWorldRotation = FRotator(0.f);
+	}
 
-	const float Pitch_R = FMath::RadiansToDegrees(FMath::Atan2(FootTrace_R.ImpactNormal.X, FootTrace_R.ImpactNormal.Z));
-	const float Roll_R = FMath::RadiansToDegrees(FMath::Atan2(FootTrace_R.ImpactNormal.Y, FootTrace_R.ImpactNormal.Z));
-	//FootRightWorldRotation = FRotator(Pitch_R, Roll_R, 0.f);
-	FootRightWorldRotation = FRotator(45.f, 0.f, 0.f);
-	
-	const float Pitch_L = FMath::RadiansToDegrees(FMath::Atan2(FootTrace_L.ImpactNormal.X, FootTrace_L.ImpactNormal.Z));
-	const float Roll_L = FMath::RadiansToDegrees(FMath::Atan2(FootTrace_L.ImpactNormal.Y, FootTrace_L.ImpactNormal.Z));
-	//FootLeftWorldRotation = FRotator(Pitch_L, Roll_L, 0.f);
-	FootLeftWorldRotation = FRotator(45.f, 0.f, 0.f);
+	if (bAllowIKLeg_L)
+	{
+		const float Pitch_L = -FMath::RadiansToDegrees(FMath::Atan2(FootTrace_L.ImpactNormal.X, FootTrace_L.ImpactNormal.Z));
+		const float Roll_L = FMath::RadiansToDegrees(FMath::Atan2(FootTrace_L.ImpactNormal.Y, FootTrace_L.ImpactNormal.Z));
+		FootLeftWorldRotation = FRotator(Pitch_L, 0.f, Roll_L);
+	}
+	else
+	{
+		FootLeftWorldRotation = FRotator(0.f);
+	}
 }
 
-FORCEINLINE void USFCharacterAnim::CalcLegIKAlphaValues(const float DeltaSeconds)
+FORCEINLINE void USFCharacterAnim::CalcIKValues(const float DeltaSeconds)
 {
 	// line trace Right foot ik position
 	FHitResult IKFootTraceResult_R;
@@ -183,7 +180,7 @@ FORCEINLINE void USFCharacterAnim::CalcLegIKAlphaValues(const float DeltaSeconds
 			IKFootOffset_L = 0.f;  // hip displacement set, nullify this value to compensate height
 		}
 
-		// calc ik foot alphas
+		// calc ik leg alphas
 		IKAlphaLegRight = IKFootOffset_R / (MaxIKLegZ * CharacterScale.Z);
 		IKAlphaLegLeft = IKFootOffset_L / (MaxIKLegZ * CharacterScale.Z);
 	}
@@ -191,28 +188,55 @@ FORCEINLINE void USFCharacterAnim::CalcLegIKAlphaValues(const float DeltaSeconds
 
 FORCEINLINE void USFCharacterAnim::DrawDebugFootIK() const
 {
-	// foot plane
-	auto IKFootL_Rot = SFCharacter->GetMesh()->GetSocketQuaternion(IKFootLBoneName).RotateVector(FVector::RightVector);
-	auto IKFootR_Rot = SFCharacter->GetMesh()->GetSocketQuaternion(IKFootRBoneName).RotateVector(FVector::LeftVector);
-	const FVector FootPlaneBox(17.f * CharacterScale.X, 13.f * CharacterScale.Y, 0.05f);
+	{
+		// foot bone rotation arrows 
+		//constexpr float ArrowSize = 25.f;
+		//
+		//const FTransform FootBone_Left = SFCharacter->GetMesh()->GetSocketTransform(IKFootLBoneName);
+		//const FVector FootBone_Left_Pos = FootBone_Left.GetLocation();
+		//const FQuat FootBone_Left_Quat = FootBone_Left.GetRotation();
+		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Left_Pos, FootBone_Left_Pos + FootBone_Left_Quat.GetAxisX() * ArrowSize, 6.f, FColor::Red);
+		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Left_Pos, FootBone_Left_Pos + FootBone_Left_Quat.GetAxisY() * ArrowSize, 6.f, FColor::Green);
+		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Left_Pos, FootBone_Left_Pos + FootBone_Left_Quat.GetAxisZ() * ArrowSize, 6.f, FColor::Blue);
+		//
+		//const FTransform FootBone_Right = SFCharacter->GetMesh()->GetSocketTransform(IKFootRBoneName);
+		//const FVector FootBone_Right_Pos = FootBone_Right.GetLocation();
+		//const FQuat FootBone_Right_Quat = FootBone_Right.GetRotation();
+		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Right_Pos, FootBone_Right_Pos + FootBone_Right_Quat.GetAxisX() * ArrowSize, 6.f, FColor::Red);
+		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Right_Pos, FootBone_Right_Pos + FootBone_Right_Quat.GetAxisY() * ArrowSize, 6.f, FColor::Green);
+		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Right_Pos, FootBone_Right_Pos + FootBone_Right_Quat.GetAxisZ() * ArrowSize, 6.f, FColor::Blue);
+	}
+
+	{
+		// foot plane
+		auto IKFootL_Rot = SFCharacter->GetMesh()->GetSocketQuaternion(IKFootLBoneName);
+		auto IKFootR_Rot = SFCharacter->GetMesh()->GetSocketQuaternion(IKFootRBoneName);
+		FQuat Rotation = FQuat(FRotator(0.f, 90.f, 90.f));
 	
-	DrawDebugSolidBox(GetWorld(), MeshBottomFootL, FootPlaneBox, IKFootL_Rot.ToOrientationQuat(), bAllowIKLeg_L ? FColor::Cyan : FColor::Blue);
-	DrawDebugSolidBox(GetWorld(), MeshBottomFootR, FootPlaneBox, IKFootR_Rot.ToOrientationQuat(), bAllowIKLeg_R ? FColor::Cyan : FColor::Blue);
+		const FVector FootPlaneBox(17.f * CharacterScale.X, 13.f * CharacterScale.Y, 0.05f);
 
-	// foot ik main locations
-	float XYScale = CharacterScale.Size2D();
-	// DrawDebugSphere(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(RootBoneName), 6, 4, FColor::Red);
-	DrawDebugSphere(GetWorld(), MeshBottomFootR, 7 * XYScale, 4, FColor::Orange);
-	DrawDebugSphere(GetWorld(), MeshBottomFootL, 7 * XYScale, 4, FColor::Orange);
-	DrawDebugSphere(GetWorld(), MeshBottomFootR_RootZ, 3 * XYScale, 4, FColor::Yellow, false, -1.f, 0);
-	DrawDebugSphere(GetWorld(), MeshBottomFootL_RootZ, 3 * XYScale, 4, FColor::Yellow, false, -1.f, 0);
+		DrawDebugSolidBox(GetWorld(), MeshBottomFootL, FootPlaneBox, IKFootL_Rot * Rotation, bAllowIKLeg_L ? FColor::Cyan : FColor::Blue);
+		DrawDebugSolidBox(GetWorld(), MeshBottomFootR, FootPlaneBox, IKFootR_Rot * Rotation, bAllowIKLeg_R ? FColor::Cyan : FColor::Blue);
+	}
 
-	// IK calculated values
-	FString LegRMsg = "IKLegR: " + FString::SanitizeFloat(IKAlphaLegRight) + "\n FootRotR: " + FootRightWorldRotation.ToString();
-	FString LegLMsg = "IKLegL: " + FString::SanitizeFloat(IKAlphaLegLeft) + "\n FootRotL" + FootLeftWorldRotation.ToString();
-	DrawDebugString(GetWorld(), MeshBottomFootR, LegRMsg, 0, FColor::White, 0.f, true);
-	DrawDebugString(GetWorld(), MeshBottomFootL, LegLMsg, 0, FColor::White, 0.f, true);
+	{
+		// foot ik main locations
+		float XYScale = CharacterScale.Size2D();
+		// DrawDebugSphere(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(RootBoneName), 6, 4, FColor::Red);
+		DrawDebugSphere(GetWorld(), MeshBottomFootR, 7 * XYScale, 4, FColor::Orange);
+		DrawDebugSphere(GetWorld(), MeshBottomFootL, 7 * XYScale, 4, FColor::Orange);
+		DrawDebugSphere(GetWorld(), MeshBottomFootR_RootZ, 3 * XYScale, 4, FColor::Yellow, false, -1.f, 0);
+		DrawDebugSphere(GetWorld(), MeshBottomFootL_RootZ, 3 * XYScale, 4, FColor::Yellow, false, -1.f, 0);
+	}
 
-	FString HipMsg = "-HipZ: " + FString::SanitizeFloat(IKLegHipDisplacementZ) + " To: " + FString::SanitizeFloat(IKLegHipDisplacementZ_To);
-	DrawDebugString(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(HipBoneName), HipMsg, 0, FColor::Red, 0.f, true);
+	{
+		// IK calculated values
+		FString LegRMsg = "IKLegR: " + FString::SanitizeFloat(IKAlphaLegRight) + "\n FootRotR: " + FootRightWorldRotation.ToString();
+		FString LegLMsg = "IKLegL: " + FString::SanitizeFloat(IKAlphaLegLeft) + "\n FootRotL" + FootLeftWorldRotation.ToString();
+		DrawDebugString(GetWorld(), MeshBottomFootR, LegRMsg, 0, FColor::White, 0.f, true);
+		DrawDebugString(GetWorld(), MeshBottomFootL, LegLMsg, 0, FColor::White, 0.f, true);
+
+		FString HipMsg = "-HipZ: " + FString::SanitizeFloat(IKLegHipDisplacementZ) + " To: " + FString::SanitizeFloat(IKLegHipDisplacementZ_To);
+		DrawDebugString(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(HipBoneName), HipMsg, 0, FColor::Red, 0.f, true);
+	}
 }

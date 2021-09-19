@@ -32,8 +32,8 @@ private:
 	// calculates rotation for foot bone to be parallel to surface
 	FORCEINLINE void CalcFootRotation(const FHitResult& FootTrace_R, const FHitResult& FootTrace_L);
 
-	// calculates IKAlphaLegLeft, IKAlphaLegRight, IKLegHipDisplacement
-	FORCEINLINE void CalcLegIKAlphaValues(const float DeltaSeconds);
+	// calculates IKAlphaLegLeft, IKAlphaLegRight, IKLegHipDisplacement, FootRightWorldRotation, FootLeftWorldRotation
+	FORCEINLINE void CalcIKValues(const float DeltaSeconds);
 
 	// default IK Foot trace query params
 	FCollisionQueryParams IKFootTraceQueryParams;
@@ -44,7 +44,7 @@ private:
 	// cache character scale
 	FVector CharacterScale;
 
-	// DEPRECATED animation notifiers ik leg controllers
+	// animation notifiers ik leg controllers
 	bool bAllowIKLeg_R, bAllowIKLeg_L;
 
 	// value to smooth hip z dislocation on leg ik
@@ -65,7 +65,7 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	FName RootBoneName;
 
-	//DEPRECATED
+
 	UPROPERTY(EditDefaultsOnly)
 	FName NotifierName_AllowIKLegR;
 	
@@ -99,24 +99,11 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	float MaxIKLegZ;
 
-	//UPROPERTY(EditDefaultsOnly)
-	ECollisionChannel FootIKTraceChannel;
-
+	UPROPERTY(EditDefaultsOnly)
+	TEnumAsByte<ECollisionChannel>FootIKTraceChannel;
 
 	UPROPERTY(BlueprintReadOnly)
 	class ASFCharacter* SFCharacter;
-
-	// IK alpha value for right foot LegIK
-	UPROPERTY(BlueprintReadOnly)
-	float IKAlphaLegRight;
-
-	// IK alpha value for left foot LegIK
-	UPROPERTY(BlueprintReadOnly)
-	float IKAlphaLegLeft;
-
-	// Hip bone z displacement during LegIK to allow one leg be relatively lower than root bone
-	UPROPERTY(BlueprintReadOnly)
-	float IKLegHipDisplacementZ;
 
 	// right foot mesh bottom part position (stable to mesh scale);
 	UPROPERTY(BlueprintReadOnly)
@@ -126,19 +113,32 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FVector MeshBottomFootL;
 
-	// left foot bone rotation to make foot plane always be parallel to surface
+
+	// for AnimGraph: IK alpha value for right foot LegIK
+	UPROPERTY(BlueprintReadOnly)
+		float IKAlphaLegRight;
+
+	// for AnimGraph:  IK alpha value for left foot LegIK
+	UPROPERTY(BlueprintReadOnly)
+		float IKAlphaLegLeft;
+
+	// for AnimGraph:  Hip bone z displacement during LegIK to allow one leg be relatively lower than root bone
+	UPROPERTY(BlueprintReadOnly)
+		float IKLegHipDisplacementZ;
+
+	// for AnimGraph:  left foot bone rotation to make foot plane always be parallel to surface
 	UPROPERTY(BlueprintReadOnly)
 	FRotator FootLeftWorldRotation;
 
-	// right foot bone rotation to make foot plane always be parallel to surface
+	// for AnimGraph:  right foot bone rotation to make foot plane always be parallel to surface
 	UPROPERTY(BlueprintReadOnly)
 	FRotator FootRightWorldRotation;
+
 
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	virtual void NativeInitializeAnimation() override;
 	
 protected:
-	//DEPRECATED
 	virtual bool HandleNotify(const FAnimNotifyEvent& AnimNotifyEvent) override;
 };

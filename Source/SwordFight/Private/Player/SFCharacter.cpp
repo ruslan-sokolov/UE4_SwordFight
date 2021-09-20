@@ -11,6 +11,8 @@
 
 #include "DrawDebugHelpers.h"
 
+#include <SwordFight/Public/Weapons/SFWeapon.h>
+
 // Sets default values
 ASFCharacter::ASFCharacter()
 {
@@ -39,6 +41,8 @@ ASFCharacter::ASFCharacter()
 void ASFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	HandleAttachWeaponOnSpawn();
 }
 
 // Called every frame
@@ -49,9 +53,9 @@ void ASFCharacter::Tick(float DeltaTime)
 	{
 		CalcRelativeYaw();
 		
-		#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		#if WITH_EDITOR
 			// DrawDebugMovement();
-		#endif
+		#endif // WITH_EDITOR
 	}
 
 }
@@ -64,10 +68,17 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAxis("MoveRight", this, &ASFCharacter::MoveRight);
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ASFCharacter::OnStartSprint);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ASFCharacter::OnStopSprint);
+
 	PlayerInputComponent->BindAction("DisableMoveToCamera", IE_Pressed, this, &ASFCharacter::OnStartDisableMoveToCamera);
 	PlayerInputComponent->BindAction("DisableMoveToCamera", IE_Released, this, &ASFCharacter::OnEndDisableMoveToCamera);
+
+
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ASFCharacter::OnAttack);
+	PlayerInputComponent->BindAction("Block", IE_Pressed, this, &ASFCharacter::OnStartBlock);
+	PlayerInputComponent->BindAction("Block", IE_Released, this, &ASFCharacter::OnStopBlock);
 
 }
 
@@ -111,6 +122,36 @@ void ASFCharacter::OnStartSprint()
 void ASFCharacter::OnStopSprint()
 {
 	SetSprinting(false);
+}
+
+void ASFCharacter::OnAttack()
+{
+	// todo: handle other cases two handed, weapon in left hand etc
+
+	if (WeaponInRightHand)
+	{
+		WeaponInRightHand->Attack();
+	}
+}
+
+void ASFCharacter::OnStartBlock()
+{
+	// todo: handle other cases, shield in right hand, only one handed equipped etc
+
+	if (WeaponInLeftHand)
+	{
+		WeaponInLeftHand->StartBlock();
+	}
+}
+
+void ASFCharacter::OnStopBlock()
+{
+	// todo: handle other cases, shield in right hand, only one handed equipped etc
+
+	if (WeaponInLeftHand)
+	{
+		WeaponInLeftHand->StopBlock();
+	}
 }
 
 void ASFCharacter::OnStartDisableMoveToCamera()
@@ -188,4 +229,62 @@ FORCEINLINE void ASFCharacter::DrawDebugMovement() const
 
 	DrawDebugCone(GetWorld(), FrontConeRootLoc, RootDirection, -ConeSize, PI/4.f, PI/4.f, 4, FColor::Red, false, -1.f, 0, 0.f);
 	DrawDebugCone(GetWorld(), BackConeRootLoc, RootDirection, ConeSize, PI/4.f, PI/4.f, 4, FColor::Orange, false, -1.f, 0, 0.f);
+}
+
+void ASFCharacter::ChangeWeapon(ASFWeapon* Weapon, EWeaponEquipHand EquipHand)
+{
+	// todo: handle two handed
+
+	switch (EquipHand)
+	{
+	case EWeaponEquipHand::LeftHand:
+		{
+			if (WeaponInLeftHand)
+			{
+				WeaponInLeftHand->Destroy();
+
+				// todo: drop weapon not destroy
+			}
+
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, LeftHandSocket);
+			Weapon->OnAttachToCharacter(this, EquipHand);
+			WeaponInLeftHand = Weapon;
+			
+			break;
+		}
+
+	case EWeaponEquipHand::RightHand:
+	default:
+		{
+			if (WeaponInRightHand)
+			{
+				WeaponInRightHand->Destroy();
+
+				// todo: drop weapon not destroy
+			}
+
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, RightHandSocket);
+			Weapon->OnAttachToCharacter(this, EquipHand);
+			WeaponInRightHand = Weapon;
+
+			break;
+		}
+	}
+}
+
+FORCEINLINE void ASFCharacter::HandleAttachWeaponOnSpawn()
+{
+	// todo: handle two handed
+
+	if (WeaponInRightHandSpawnClass)
+	{
+		ASFWeapon* SpawnedWeapon = GetWorld()->SpawnActor<ASFWeapon>(WeaponInRightHandSpawnClass);
+		ChangeWeapon(SpawnedWeapon, EWeaponEquipHand::RightHand);
+	}
+
+	if (WeaponInLeftHandSpawnClass)
+	{
+		ASFWeapon* SpawnedWeapon = GetWorld()->SpawnActor<ASFWeapon>(WeaponInLeftHandSpawnClass);
+		ChangeWeapon(SpawnedWeapon, EWeaponEquipHand::LeftHand);
+	}
 }

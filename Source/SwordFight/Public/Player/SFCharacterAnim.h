@@ -50,6 +50,10 @@ private:
 	// value to smooth hip z dislocation on leg ik
 	float IKLegHipDisplacementZ_To;
 
+
+	// get bWantToBlock value
+	FORCEINLINE void UpdateWantToBlock();
+
 public:
 	USFCharacterAnim();
 
@@ -77,7 +81,7 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly)
 	FName NotifierName_BlockIKLegL;
-	//
+
 	
 	// z distance between foot bone and foot mesh bottom part (actual value will be mult by char mesh scale)
 	UPROPERTY(EditDefaultsOnly)
@@ -116,15 +120,15 @@ public:
 
 	// for AnimGraph: IK alpha value for right foot LegIK
 	UPROPERTY(BlueprintReadOnly)
-		float IKAlphaLegRight;
+	float IKAlphaLegRight;
 
 	// for AnimGraph:  IK alpha value for left foot LegIK
 	UPROPERTY(BlueprintReadOnly)
-		float IKAlphaLegLeft;
+	float IKAlphaLegLeft;
 
 	// for AnimGraph:  Hip bone z displacement during LegIK to allow one leg be relatively lower than root bone
 	UPROPERTY(BlueprintReadOnly)
-		float IKLegHipDisplacementZ;
+	float IKLegHipDisplacementZ;
 
 	// for AnimGraph:  left foot bone rotation to make foot plane always be parallel to surface
 	UPROPERTY(BlueprintReadOnly)
@@ -133,7 +137,10 @@ public:
 	// for AnimGraph:  right foot bone rotation to make foot plane always be parallel to surface
 	UPROPERTY(BlueprintReadOnly)
 	FRotator FootRightWorldRotation;
-
+	
+	// for animGraph: true if character has shield and shield blocking is active
+	UPROPERTY(BlueprintReadOnly)
+	bool bWantToBlock;
 
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 

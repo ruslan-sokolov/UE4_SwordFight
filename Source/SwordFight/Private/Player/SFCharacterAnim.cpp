@@ -6,6 +6,8 @@
 #include "Player/SFCharacter.h"
 #include "DrawDebugHelpers.h"
 
+#include <SwordFight/Public/Weapons/SFWeapon.h>
+
 USFCharacterAnim::USFCharacterAnim()
 {
 	// defaults
@@ -68,6 +70,7 @@ void USFCharacterAnim::NativeUpdateAnimation(float DeltaSeconds)
 
 	CalcMeshBottomFootPositions();
 	CalcIKValues(DeltaSeconds);
+	UpdateWantToBlock();
 
 	#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		DrawDebugFootIK();
@@ -189,25 +192,6 @@ FORCEINLINE void USFCharacterAnim::CalcIKValues(const float DeltaSeconds)
 FORCEINLINE void USFCharacterAnim::DrawDebugFootIK() const
 {
 	{
-		// foot bone rotation arrows 
-		//constexpr float ArrowSize = 25.f;
-		//
-		//const FTransform FootBone_Left = SFCharacter->GetMesh()->GetSocketTransform(IKFootLBoneName);
-		//const FVector FootBone_Left_Pos = FootBone_Left.GetLocation();
-		//const FQuat FootBone_Left_Quat = FootBone_Left.GetRotation();
-		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Left_Pos, FootBone_Left_Pos + FootBone_Left_Quat.GetAxisX() * ArrowSize, 6.f, FColor::Red);
-		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Left_Pos, FootBone_Left_Pos + FootBone_Left_Quat.GetAxisY() * ArrowSize, 6.f, FColor::Green);
-		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Left_Pos, FootBone_Left_Pos + FootBone_Left_Quat.GetAxisZ() * ArrowSize, 6.f, FColor::Blue);
-		//
-		//const FTransform FootBone_Right = SFCharacter->GetMesh()->GetSocketTransform(IKFootRBoneName);
-		//const FVector FootBone_Right_Pos = FootBone_Right.GetLocation();
-		//const FQuat FootBone_Right_Quat = FootBone_Right.GetRotation();
-		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Right_Pos, FootBone_Right_Pos + FootBone_Right_Quat.GetAxisX() * ArrowSize, 6.f, FColor::Red);
-		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Right_Pos, FootBone_Right_Pos + FootBone_Right_Quat.GetAxisY() * ArrowSize, 6.f, FColor::Green);
-		//DrawDebugDirectionalArrow(GetWorld(), FootBone_Right_Pos, FootBone_Right_Pos + FootBone_Right_Quat.GetAxisZ() * ArrowSize, 6.f, FColor::Blue);
-	}
-
-	{
 		// foot plane
 		auto IKFootL_Rot = SFCharacter->GetMesh()->GetSocketQuaternion(IKFootLBoneName);
 		auto IKFootR_Rot = SFCharacter->GetMesh()->GetSocketQuaternion(IKFootRBoneName);
@@ -238,5 +222,16 @@ FORCEINLINE void USFCharacterAnim::DrawDebugFootIK() const
 
 		FString HipMsg = "-HipZ: " + FString::SanitizeFloat(IKLegHipDisplacementZ) + " To: " + FString::SanitizeFloat(IKLegHipDisplacementZ_To);
 		DrawDebugString(GetWorld(), SFCharacter->GetMesh()->GetSocketLocation(HipBoneName), HipMsg, 0, FColor::Red, 0.f, true);
+	}
+}
+
+FORCEINLINE void USFCharacterAnim::UpdateWantToBlock()
+{
+	if (SFCharacter)
+	{
+		if (ASFWeapon* Shield = SFCharacter->GetWeaponInLeftHand())
+		{
+			bWantToBlock = Shield->IsBlocking();
+		}
 	}
 }

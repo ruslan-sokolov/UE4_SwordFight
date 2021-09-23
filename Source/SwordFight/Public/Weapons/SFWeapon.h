@@ -7,6 +7,7 @@
 #include "SFWeapon.generated.h"
 
 class ASFCharacter;
+class UBoxComponent;
 
 // todo: enums to separate file
 
@@ -48,6 +49,10 @@ protected:
 	/** Weapon mesh */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	USkeletalMeshComponent* MeshComp;
+
+	/** Weapon mesh */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	UBoxComponent* BoxCollisionComp;
 
 	/* To which hand weapon can be attached */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
@@ -98,6 +103,10 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	// called when OnAttachToCharacter method is used in code
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnAttached(ASFCharacter* CharacterToAttach, EWeaponEquipHand PreferredHand);
 
 public:	
 	

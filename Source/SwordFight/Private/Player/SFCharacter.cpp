@@ -246,9 +246,10 @@ void ASFCharacter::ChangeWeapon(ASFWeapon* Weapon, EWeaponEquipHand EquipHand)
 				// todo: drop weapon not destroy
 			}
 
+			WeaponInLeftHand = Weapon;
+			
 			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, LeftHandSocket);
 			Weapon->OnAttachToCharacter(this, EquipHand);
-			WeaponInLeftHand = Weapon;
 			
 			break;
 		}
@@ -263,9 +264,10 @@ void ASFCharacter::ChangeWeapon(ASFWeapon* Weapon, EWeaponEquipHand EquipHand)
 				// todo: drop weapon not destroy
 			}
 
+			WeaponInRightHand = Weapon;
+			
 			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, RightHandSocket);
 			Weapon->OnAttachToCharacter(this, EquipHand);
-			WeaponInRightHand = Weapon;
 
 			break;
 		}

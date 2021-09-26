@@ -148,13 +148,13 @@ public:
 	UFUNCTION(BlueprintPure, BlueprintCallable, Category = Character)
 	FORCEINLINE bool IsShouldSprint() const { return bShouldSprint; }
 
-	/** If relative speed > 0.01f, character is moving */
+	/** If relative speed != 0.f, character is moving */
 	UFUNCTION(BlueprintPure, BlueprintCallable, Category = Character)
 	FORCEINLINE bool IsMoving() const { return RelativeSpeedRight != 0.f || RelativeSpeedForward != 0.f; }
 
-	/** if relative speed > 1.98 */
+	/** if ABS max speed >= 2.f */
 	UFUNCTION(BlueprintPure, BlueprintCallable, Category = Character)
-	FORCEINLINE bool IsSprinting() const { return RelativeSpeedRight >= 2.f || RelativeSpeedForward >= 2.f; }
+	FORCEINLINE bool IsSprinting() const { return GetAbsMaxSpeed() >= 2.f; }
 
 
 	/** Return current weapon in right hand */
